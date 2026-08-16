@@ -1,0 +1,13 @@
+# Caddy terminates TLS and routes by hostname.
+# GAME_SITE: "http://localhost" for a first boot, or "game.example.com" in production.
+
+{$GAME_SITE:localhost} {
+	encode gzip
+	reverse_proxy game:80
+}
+
+# Uncomment when the API container is added to compose.yml
+# {$API_SITE} {
+# 	encode gzip
+# 	reverse_proxy api:8080
+# }

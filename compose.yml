@@ -1,0 +1,56 @@
+# Shared stack for the Hetzner VPS.
+# Each app keeps its own git repo + Dockerfile. This file only orchestrates them.
+# Add new services below (api, etc.). Do not put app source in this repo.
+
+services:
+  caddy:
+    image: caddy:2.9-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      GAME_SITE: ${GAME_SITE:-localhost}
+      API_SITE: ${API_SITE:-}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - game
+
+  game:
+    build:
+      context: ${GAME_PATH:-../Library.LibrarianChallenge.Game}
+      dockerfile: Dockerfile
+      args:
+        LC_API_BASE_URL: ${LC_API_BASE_URL:-}
+        LC_API_KEY: ${LC_API_KEY:-}
+        LC_USE_API_BOOKS: ${LC_USE_API_BOOKS:-false}
+        LC_FORMSPREE_URL: ${LC_FORMSPREE_URL:-}
+        LC_RECAPTCHA_SITE_KEY: ${LC_RECAPTCHA_SITE_KEY:-}
+        LC_MAX_RESULTS_PER_TAG: ${LC_MAX_RESULTS_PER_TAG:-20}
+        LC_AUTO_TAG: ${LC_AUTO_TAG:-true}
+    image: librarians-challenge:local
+    restart: unless-stopped
+    expose:
+      - "80"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # api:
+  #   build:
+  #     context: ${API_PATH:-../Library.LibrarianChallenge.Game.Api}
+  #     dockerfile: Dockerfile
+  #   image: librarians-challenge-api:local
+  #   restart: unless-stopped
+  #   expose:
+  #     - "8080"
+
+volumes:
+  caddy_data:
+  caddy_config:

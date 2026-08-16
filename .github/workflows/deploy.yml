@@ -1,0 +1,118 @@
+name: Deploy infra
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-infrastructure
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to Hetzner
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      SERVER_HOST: ${{ secrets.SERVER_HOST }}
+      SERVER_USER: ${{ secrets.SERVER_USER }}
+      SERVER_PORT: ${{ secrets.SERVER_PORT }}
+      INFRA_PATH: ${{ vars.INFRA_PATH }}
+      GAME_PATH: ${{ vars.GAME_PATH }}
+      HEALTHCHECK_URL: ${{ vars.HEALTHCHECK_URL }}
+
+    steps:
+      - name: Check required secrets
+        run: |
+          set -euo pipefail
+          missing=0
+          for name in SERVER_HOST SERVER_USER SERVER_SSH_KEY; do
+            case "$name" in
+              SERVER_HOST) value="${{ secrets.SERVER_HOST }}" ;;
+              SERVER_USER) value="${{ secrets.SERVER_USER }}" ;;
+              SERVER_SSH_KEY) value="${{ secrets.SERVER_SSH_KEY }}" ;;
+            esac
+            if [ -z "$value" ]; then
+              echo "Falta el secreto $name"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            echo "Creá los secretos en este repo: Settings → Secrets and variables → Actions"
+            exit 1
+          fi
+
+      - name: Start SSH agent
+        uses: webfactory/ssh-agent@v0.9.2
+        with:
+          ssh-private-key: ${{ secrets.SERVER_SSH_KEY }}
+
+      - name: Configure known_hosts
+        env:
+          SERVER_SSH_KNOWN_HOSTS: ${{ secrets.SERVER_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          port="${SERVER_PORT:-22}"
+          if [ -n "${SERVER_SSH_KNOWN_HOSTS:-}" ]; then
+            printf '%s\n' "$SERVER_SSH_KNOWN_HOSTS" >> ~/.ssh/known_hosts
+          else
+            ssh-keyscan -p "$port" -T 10 -H "$SERVER_HOST" >> ~/.ssh/known_hosts
+          fi
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Deploy over SSH
+        run: |
+          set -euo pipefail
+          port="${SERVER_PORT:-22}"
+          infra_path="${INFRA_PATH:-/opt/infra}"
+          game_path="${GAME_PATH:-/opt/my-project}"
+          health_url="${HEALTHCHECK_URL:-}"
+
+          remote_env="$(
+            printf 'export INFRA_PATH=%q\n' "$infra_path"
+            printf 'export GAME_PATH=%q\n' "$game_path"
+            printf 'export HEALTHCHECK_URL=%q\n' "$health_url"
+          )"
+
+          ssh -p "$port" \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o ServerAliveInterval=15 \
+            -o ServerAliveCountMax=4 \
+            "${SERVER_USER}@${SERVER_HOST}" \
+            "bash -s" <<REMOTE
+          set -euo pipefail
+          ${remote_env}
+
+          echo "==> Actualizando infra"
+          git -C "\$INFRA_PATH" fetch origin
+          git -C "\$INFRA_PATH" reset --hard origin/main
+
+          echo "==> Actualizando game"
+          git -C "\$GAME_PATH" fetch origin
+          git -C "\$GAME_PATH" reset --hard origin/main
+
+          echo "==> Compose up"
+          cd "\$INFRA_PATH"
+          docker compose pull
+          docker compose build
+          docker compose up -d --remove-orphans
+          docker image prune -f
+          docker compose ps
+
+          echo "==> Health check"
+          curl --fail --silent --show-error --max-time 20 http://127.0.0.1/health
+
+          if [ -n "\${HEALTHCHECK_URL:-}" ]; then
+            curl --fail --silent --show-error --max-time 20 "\$HEALTHCHECK_URL"
+          fi
+
+          echo "==> Despliegue listo"
+          REMOTE
