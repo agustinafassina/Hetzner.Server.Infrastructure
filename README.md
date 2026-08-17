@@ -24,19 +24,19 @@ Las variables de cada contenedor viven en el `.env` **de este repo en el servido
 
 ## Layout en el VPS
 ```text
-/opt/infra     ← clone de este repo + .env
-/opt/app-a     ← clone de una app (ejemplo: el juego)
-/opt/app-b     ← clone de otra app (ejemplo: la API)
+/opt/infra         ← clone de este repo + .env
+/opt/my-project    ← Librarian's Challenge (game)
+/opt/wishes-app    ← Wishes.App
 ```
 
-Hoy el Compose incluye el servicio `game` (Librarian's Challenge). La API va comentada hasta que la sumes. Ambos son contenedores iguales de cara a Caddy: hostname → `reverse_proxy`.
+Hoy el Compose incluye `game` y `wishes`. La API va comentada hasta que la sumes. Cada app es un contenedor: hostname → `reverse_proxy`.
 
 ## Primera vez en el server
 Como `root`, usuario `deploy` (o el que uses) con Docker:
 
 ```bash
-mkdir -p /opt/infra /opt/my-project
-chown deploy:deploy /opt/infra /opt/my-project
+mkdir -p /opt/infra /opt/my-project /opt/wishes-app
+chown deploy:deploy /opt/infra /opt/my-project /opt/wishes-app
 ```
 
 Como `deploy`, cloná **este** repo en `/opt/infra` y cada app en su carpeta (misma deploy key de GitHub).
@@ -54,17 +54,24 @@ cp .env.example .env
 nano .env
 ```
 
-Valores mínimos (el juego es un servicio más; `GAME_PATH` apunta a su clone):
+Valores mínimos (`GAME_PATH` y `WISHES_PATH` apuntan a cada clone):
 
 ```env
 GAME_PATH=/opt/my-project
 GAME_SITE=http://localhost
+WISHES_PATH=/opt/wishes-app
+WISHES_SITE=wishes.localhost
+WISHES_APP_BASE_URL=http://wishes.localhost
 ```
+
+Wishes necesita Auth0 en el `.env` (`WISHES_AUTH0_*` y `WISHES_AUTH0_SECRET` ≥ 32 chars). `WISHES_APP_BASE_URL` es la URL pública **sin** barra final.
 
 Cuando tengas dominio (Cloudflare A/AAAA a la IP del VPS, SSL Full):
 
 ```env
 GAME_SITE=game.tudominio.com
+WISHES_SITE=wishes.tudominio.com
+WISHES_APP_BASE_URL=https://wishes.tudominio.com
 CADDY_EMAIL=tu@email.com
 ```
 
@@ -85,11 +92,13 @@ Con este repo al lado de los clones de las apps:
 ```bash
 cp .env.example .env
 # GAME_PATH=../Library.LibrarianChallenge.Game
+# WISHES_PATH=../Wishes.App
 # GAME_SITE=http://localhost
+# WISHES_SITE=wishes.localhost
 docker compose up -d --build
 ```
 
-Abrí <http://localhost> (puerto 80). Si 80 está ocupado, cambiá el mapeo en `compose.yml` o liberá el puerto.
+Abrí <http://localhost> (game) y <http://wishes.localhost> (wishes). Si 80 está ocupado, cambiá el mapeo en `compose.yml` o liberá el puerto.
 
 ## Cómo agregar otro contenedor
 1. Cloná el repo de la app en `/opt/...`  
@@ -117,6 +126,7 @@ Variables:
 |----------|---------|
 | `INFRA_PATH` | `/opt/infra` |
 | `GAME_PATH` | `/opt/my-project` |
+| `WISHES_PATH` | `/opt/wishes-app` |
 | `HEALTHCHECK_URL` | `https://game.tudominio.com/health` |
 
 El `.env` del server **no** se pisa en el deploy (`git reset` no lo toca: está en `.gitignore`).
@@ -127,6 +137,8 @@ cd /opt/infra
 docker compose ps
 docker compose logs -f caddy
 docker compose logs -f game
+docker compose logs -f wishes
 docker compose up -d --build game    # reconstruir un servicio
+docker compose up -d --build wishes
 docker compose down                  # apaga todo el stack
 ```

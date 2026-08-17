@@ -6,6 +6,11 @@
 	reverse_proxy game:80
 }
 
+{$WISHES_SITE:wishes.localhost} {
+	encode gzip
+	reverse_proxy wishes:{$WISHES_PORT:3000}
+}
+
 # Uncomment when the API container is added to compose.yml
 # {$API_SITE} {
 # 	encode gzip

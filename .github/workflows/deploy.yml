@@ -24,6 +24,7 @@ jobs:
       SERVER_PORT: ${{ secrets.SERVER_PORT }}
       INFRA_PATH: ${{ vars.INFRA_PATH }}
       GAME_PATH: ${{ vars.GAME_PATH }}
+      WISHES_PATH: ${{ vars.WISHES_PATH }}
       HEALTHCHECK_URL: ${{ vars.HEALTHCHECK_URL }}
 
     steps:
@@ -73,11 +74,13 @@ jobs:
           port="${SERVER_PORT:-22}"
           infra_path="${INFRA_PATH:-/opt/infra}"
           game_path="${GAME_PATH:-/opt/my-project}"
+          wishes_path="${WISHES_PATH:-/opt/wishes-app}"
           health_url="${HEALTHCHECK_URL:-}"
 
           remote_env="$(
             printf 'export INFRA_PATH=%q\n' "$infra_path"
             printf 'export GAME_PATH=%q\n' "$game_path"
+            printf 'export WISHES_PATH=%q\n' "$wishes_path"
             printf 'export HEALTHCHECK_URL=%q\n' "$health_url"
           )"
 
@@ -98,6 +101,10 @@ jobs:
           echo "==> Actualizando game"
           git -C "\$GAME_PATH" fetch origin
           git -C "\$GAME_PATH" reset --hard origin/main
+
+          echo "==> Actualizando wishes"
+          git -C "\$WISHES_PATH" fetch origin
+          git -C "\$WISHES_PATH" reset --hard origin/main
 
           echo "==> Compose up"
           cd "\$INFRA_PATH"
