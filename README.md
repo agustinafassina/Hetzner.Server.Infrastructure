@@ -142,3 +142,6 @@ docker compose up -d --build game    # reconstruir un servicio
 docker compose up -d --build wishes
 docker compose down                  # apaga todo el stack
 ```
+
+#### Version
+1.0
