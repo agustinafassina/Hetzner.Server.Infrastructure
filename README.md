@@ -64,7 +64,7 @@ WISHES_SITE=wishes.localhost
 WISHES_APP_BASE_URL=http://wishes.localhost
 ```
 
-Wishes necesita Auth0 en el `.env` (`WISHES_AUTH0_*` y `WISHES_AUTH0_SECRET` ≥ 32 chars). `WISHES_APP_BASE_URL` es la URL pública **sin** barra final.
+Wishes necesita Auth0 en el `.env` (`WISHES_AUTH0_*`, incluido `WISHES_AUTH0_AUDIENCE`, y `WISHES_AUTH0_SECRET` ≥ 32 chars). `WISHES_APP_BASE_URL` es la URL pública **sin** barra final.
 
 Cuando tengas dominio (Cloudflare A/AAAA a la IP del VPS, SSL Full):
 
