@@ -69,6 +69,8 @@ services:
       AUTH0_AUDIENCE: ${WISHES_AUTH0_AUDIENCE:-}
       AUTH0_SECRET: ${WISHES_AUTH0_SECRET:-}
       APP_BASE_URL: ${WISHES_APP_BASE_URL:-}
+    volumes:
+      - ${WISHES_DATA_PATH:-/opt/wishes-data}:/app/data/locations/users
 
   # api:
   #   build:

@@ -27,6 +27,7 @@ Las variables de cada contenedor viven en el `.env` **de este repo en el servido
 /opt/infra         ← clone de este repo + .env
 /opt/my-project    ← Librarian's Challenge (game)
 /opt/wishes-app    ← Wishes.App
+/opt/wishes-data   ← JSON de usuarios (volumen; sobrevive rebuilds)
 ```
 
 Hoy el Compose incluye `game` y `wishes`. La API va comentada hasta que la sumes. Cada app es un contenedor: hostname → `reverse_proxy`.
@@ -35,8 +36,8 @@ Hoy el Compose incluye `game` y `wishes`. La API va comentada hasta que la sumes
 Como `root`, usuario `deploy` (o el que uses) con Docker:
 
 ```bash
-mkdir -p /opt/infra /opt/my-project /opt/wishes-app
-chown deploy:deploy /opt/infra /opt/my-project /opt/wishes-app
+mkdir -p /opt/infra /opt/my-project /opt/wishes-app /opt/wishes-data
+chown deploy:deploy /opt/infra /opt/my-project /opt/wishes-app /opt/wishes-data
 ```
 
 Como `deploy`, cloná **este** repo en `/opt/infra` y cada app en su carpeta (misma deploy key de GitHub).
@@ -60,6 +61,7 @@ Valores mínimos (`GAME_PATH` y `WISHES_PATH` apuntan a cada clone):
 GAME_PATH=/opt/my-project
 GAME_SITE=http://localhost
 WISHES_PATH=/opt/wishes-app
+WISHES_DATA_PATH=/opt/wishes-data
 WISHES_SITE=wishes.localhost
 WISHES_APP_BASE_URL=http://wishes.localhost
 ```
