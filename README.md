@@ -142,7 +142,10 @@ docker compose logs -f game
 docker compose logs -f wishes
 docker compose up -d --build game    # reconstruir un servicio
 docker compose up -d --build wishes
-docker compose down                  # apaga todo el stack
+docker compose build --no-cache      # rebuild sin cache de capas
+docker compose up -d --force-recreate
+docker compose build --no-cache game && docker compose up -d --force-recreate game
+docker compose down                  # apaga todo el stack (no borra /opt/wishes-data)
 ```
 
 #### Version
